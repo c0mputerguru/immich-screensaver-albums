@@ -15,7 +15,7 @@ current album state.
 ## Commands
 
 ```bash
-go build -o bin/immich-album-generator .   # build; bin/ is the committed output location
+go build -o bin/immich-album-generator .   # build output goes to bin/ (gitignored)
 go run . --help                            # run without building
 go test ./...                              # all tests
 go test ./pkg/selector/ -run TestCalculateDecayWeight -v   # single test
@@ -23,8 +23,9 @@ go vet ./...                               # vet (currently clean)
 go build ./...                             # typecheck only
 ```
 
-There is no Makefile, no CI config, no linter config, and no README. `bin/` holds a
-committed built binary; rebuild if you change source.
+There is no Makefile, no CI config, and no linter config. Built binaries go to
+`bin/`, which is gitignored; rebuild if you change source. The module requires Go
+1.26.1 (`go.mod`). `README.md` documents usage for humans.
 
 ## Running
 
@@ -39,14 +40,15 @@ go run . --people "Alice,Bob" --people-album-name "Family" --recent-limit 0
 ```
 
 All flags live on the single root cobra command, prefixed per album type:
-`--recent-days/--recent-limit/--recent-half-life/--recent-album-name`, the same for
-`--memories-*` and `--people-*`, plus the globals `--dry-run` and `--verbose`.
-There are no subcommands. `--verbose` sets `Client.Verbose`, making `doRequest`
-log the method, URL, and pretty-printed JSON request/response bodies to stderr
-(prefixed `Immich:`); it never logs the API key. `Client.LogWriter` overrides the
-destination and exists so tests can capture the output. Defaults: recent 30
-days/100 items/half-life 7; memories 7 days/100
-items/half-life 2; people 100 items/half-life 180.
+`--recent-days/--recent-limit/--recent-half-life/--recent-album-name`, the same
+`--memories-*`, plus `--people`/`--people-limit`/`--people-half-life`/
+`--people-album-name` (People has no days flag), and the globals `--dry-run` and
+`--verbose`. There are no subcommands. `--verbose` sets `Client.Verbose`, making
+`doRequest` log the method, URL, and pretty-printed JSON request/response bodies to
+stderr (prefixed `Immich:`); it never logs the API key. `Client.LogWriter` overrides
+the destination and exists so tests can capture the output. Defaults: recent 90
+days/5000 items/half-life 30; memories 14 days/5000 items/half-life 7; people 5000
+items/half-life 3650.
 
 Enable/disable logic in `runFunc`: the Recent block runs only when `recentLimit > 0`,
 Memories only when `memoriesLimit > 0`, People only when `--people` is non-empty.
@@ -79,7 +81,7 @@ and `ProcessMemories` only compute weights, because the API searches already ret
 exactly the wanted date range.
 
 `pkg/selector` is deliberately pure and dependency-free (no HTTP, no clock
-injection except `time.Now()`): this is the only package with tests. Keep it that
+injection except `time.Now()`): its tests need no HTTP server. Keep it that
 way — add logic here rather than in `pkg/sync` when it can be expressed as a pure
 function over assets/dates, because it is testable without a live Immich server.
 
@@ -200,7 +202,7 @@ write path, gate it on `dryRun` explicitly — there is no central interceptor.
   `createdAfter`/`createdBefore`, which filter on upload time and would make Recent
   and Memories windows wrong.
 - `ProcessPeople` applies no date filter at all — the half-life weight is the only
-  recency influence, which is why its default (180) is much larger than the others.
+  recency influence, which is why its default (3650) is much larger than the others.
   `ProcessRecent` is the same shape: the query bounds the window, so the selector
   only weights.
 - `CalculateDaysDistance` normalizes both times to UTC midnight, so it is a whole-day
@@ -215,16 +217,16 @@ write path, gate it on `dryRun` explicitly — there is no central interceptor.
   dependencies; use `net/http` and `encoding/json` directly.
 - Package layout is layer-based under `pkg/`: `immich` = API access, `selector` =
   pure algorithms, `sync` = orchestration. `cmd` holds only cobra wiring.
-- All logging is `log.Printf` / `fmt.Println` to the standard logger — no logging
-  framework, no structured fields. Existing log lines are prefixed with the album
+- All logging is `log.Printf` / `log.Println` / `fmt.Print*` to the standard logger —
+  no logging framework, no structured fields. Existing log lines are prefixed with the album
   type (`Recent:`, `Memories:`, `People:`) and dry-run lines with `[DRY RUN]`;
   match that style.
 - Errors are wrapped with `fmt.Errorf("...: %w", err)` at the layer boundary.
-- Tests are table-free, plain `testing` functions with `math.Abs(...) > 1e-9`
-  float comparisons (see `pkg/selector/*_test.go`). There is no interface or mock
-  around `*immich.Client`, but it can be tested end-to-end by pointing
-  `NewClient` at an `httptest.NewServer` and inspecting the decoded request bodies
-  (`pkg/immich/api_test.go` does exactly this for pagination). `pkg/sync` remains
+- Tests are table-free, plain `testing` functions; float comparisons use
+  `math.Abs(...) > 1e-9` (see `pkg/selector/*_test.go`). There is no interface or
+  mock around `*immich.Client`, but it is tested end-to-end by pointing `NewClient`
+  at an `httptest.NewServer` and inspecting request bodies and verbose output
+  (`pkg/immich/api_test.go`, `album_test.go`, `client_test.go`). `pkg/sync` remains
   untested because it needs a live server.
 - Structs in `pkg/immich/types.go` carry JSON tags matching the Immich wire format;
   types are request/response shaped rather than domain shaped.

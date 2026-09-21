@@ -1,0 +1,28 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Built binaries / test artifacts
+/bin/
+/immich-album-generator
+*.exe
+*.test
+*.out
+*.prof
+coverage.*
+
+# Go workspace / tooling
+go.work
+go.work.sum
+vendor/
+.idea/
+.vscode/
+.crush/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
