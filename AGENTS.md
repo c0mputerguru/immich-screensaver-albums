@@ -23,9 +23,12 @@ go vet ./...                               # vet (currently clean)
 go build ./...                             # typecheck only
 ```
 
-There is no Makefile, no CI config, and no linter config. Built binaries go to
-`bin/`, which is gitignored; rebuild if you change source. The module requires Go
-1.26.1 (`go.mod`). `README.md` documents usage for humans.
+There is no Makefile and no linter config. Built binaries go to `bin/`, which is
+gitignored; rebuild if you change source. The module requires Go 1.26.1 (`go.mod`).
+`README.md` documents usage for humans. CI is `.github/workflows/build-release.yml`:
+every commit is tested and cross-compiled for linux (amd64/arm64), darwin
+(amd64/arm64), and windows (amd64); pushes to `main` and `v*` tags publish the
+binaries to a GitHub release.
 
 ## Running
 

@@ -28,6 +28,14 @@ go run . --help
 Requires Go (module targets `go 1.26.1`). Only `spf13/cobra` and `joho/godotenv`
 are used beyond the standard library.
 
+## Releases
+
+CI runs on every push (`.github/workflows/build-release.yml`): it runs the tests,
+then cross-compiles binaries for linux (amd64/arm64), darwin (amd64/arm64), and
+windows (amd64). Pushes to `main` update the rolling `latest` release; pushing a
+`v*` tag publishes a versioned release. Build artifacts are named
+`immich-album-generator-<os>-<arch>[.exe]`.
+
 ## Credentials
 
 `--url` / `--api-key` default to the `IMMICH_URL` / `IMMICH_API_KEY` environment
